@@ -1,16 +1,4 @@
-import {
-  Alert,
-  Keyboard,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  Touchable,
-  TouchableOpacity,
-  TouchableWithoutFeedback,
-  View,
-} from 'react-native';
+import {KeyboardAvoidingView, ScrollView, StyleSheet, Text} from 'react-native';
 import React, {useState} from 'react';
 import ImageComp from '../../components/ImageComp/ImageComp';
 import {Images} from '../../assets/images/Images';
@@ -25,6 +13,7 @@ import {useNavigation} from '@react-navigation/native';
 import {RootStackParamList} from '../../constants/Navigations';
 import {NativeStackNavigationProp} from 'react-native-screens/lib/typescript/native-stack/types';
 import {storage} from '../../storage/storage';
+import Toast from 'react-native-toast-message';
 
 const Register: React.FC = () => {
   type NavigationProps = NativeStackNavigationProp<
@@ -41,6 +30,7 @@ const Register: React.FC = () => {
   const [confirmPassword, setConfirmPassword] = useState<string>('');
   const [visiblePass, setVisiblePass] = useState<boolean>(false);
   const [visibleConfirmPass, setVisibleConfirmPass] = useState<boolean>(false);
+  const [loader, setLoader] = useState<boolean>(false);
 
   const [errors, setErrors] = useState<{
     nameErr: string;
@@ -54,18 +44,10 @@ const Register: React.FC = () => {
     confirmPassErr: '',
   });
 
-  const handleForgotPassword = async () => {
-    try {
-      await auth().sendPasswordResetEmail(email);
-      Alert.alert('Success', 'Password reset email sent!');
-    } catch (error: any) {
-      Alert.alert('Error', error.message);
-    }
-  };
-
   const handleLogin = async () => {
     navigation.navigate('LOGIN');
   };
+
   const handleSignUp = async () => {
     let hasError = false;
 
@@ -74,7 +56,6 @@ const Register: React.FC = () => {
       hasError = true;
     } else {
       setErrors(prev => ({...prev, nameErr: ''}));
-      hasError = true;
     }
 
     if (!email) {
@@ -100,6 +81,7 @@ const Register: React.FC = () => {
     } else {
       setErrors(prev => ({...prev, passErr: ''}));
     }
+
     if (confirmPassword !== password) {
       setErrors(prev => ({...prev, confirmPassErr: 'Passwords do not match!'}));
       hasError = true;
@@ -109,23 +91,32 @@ const Register: React.FC = () => {
 
     if (hasError) return;
 
+    setLoader(true);
     try {
       const result = await auth().createUserWithEmailAndPassword(
         email,
         password,
       );
+      await result.user.updateProfile({displayName: name});
+
       const userData = {
         userName: name,
         userEmail: email,
       };
-      console.log('result', result);
-
-      if (result) {
-        storage.set('userData', JSON.stringify(userData));
-        navigation.navigate('HOME');
+      storage.set('userData', JSON.stringify(userData));
+      navigation.navigate('HOME');
+    } catch (error: any) {
+      let errorMessage = 'Registration failed. Please try again.';
+      if (error.code === 'auth/email-already-in-use') {
+        errorMessage = 'This email is already registered.';
+      } else if (error.code === 'auth/invalid-email') {
+        errorMessage = 'Invalid email address.';
+      } else if (error.code === 'auth/weak-password') {
+        errorMessage = 'Password is too weak.';
       }
-    } catch (error) {
       console.error('Register failed:', error);
+    } finally {
+      setLoader(false);
     }
   };
   return (
@@ -216,6 +207,7 @@ const Register: React.FC = () => {
           buttonString={Strings.SIGNUP}
           btnText={{color: theme.text}}
           handlePress={handleSignUp}
+          loader={loader}
         />
         <Text style={[styles.orText, {color: theme.text}]}>
           {Strings.ALREADY_HAVE_ACCOUNT}

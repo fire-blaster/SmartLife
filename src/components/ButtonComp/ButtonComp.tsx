@@ -1,4 +1,7 @@
 import {
+  ActivityIndicator,
+  Image,
+  ImageStyle,
   StyleProp,
   Text,
   TextStyle,
@@ -13,6 +16,10 @@ interface ButtonCompProps {
   btnText?: StyleProp<TextStyle>;
   buttonString?: string;
   handlePress?: () => void;
+  loader?: boolean;
+  imgButton?: boolean;
+  src?: any;
+  imgButtonStyle?: StyleProp<ImageStyle>;
 }
 
 const ButtonComp: React.FC<ButtonCompProps> = ({
@@ -20,15 +27,25 @@ const ButtonComp: React.FC<ButtonCompProps> = ({
   btnText,
   buttonString,
   handlePress,
+  loader,
+  imgButton,
+  src,
+  imgButtonStyle,
 }) => {
   return (
     <TouchableOpacity
       style={[styles.buttonContainer, btnContainer]}
       activeOpacity={0.7}
       onPress={handlePress}>
-      <Text style={[styles.buttonText, btnText]}>{buttonString}</Text>
+      {loader ? (
+        <ActivityIndicator size="small" color="#fff" />
+      ) : imgButton ? (
+        <Image source={src} style={imgButtonStyle} />
+      ) : (
+        <Text style={[styles.buttonText, btnText]}>{buttonString}</Text>
+      )}
     </TouchableOpacity>
   );
 };
 
-export default ButtonComp;
+export default React.memo(ButtonComp);
